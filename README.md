@@ -10,13 +10,18 @@ This will help get you up and running in no time
 
 1. clone the project to your webhost
 ```
-    > git clone jppier/url-shortener
+    > git clone https://github.com/jppier/url-shortener.git
 ```
 2. Update the app/config/parameters.yml file with the correct hosting domain
 ```
-    redirect_base_url: http://localhost:8000
+    redirect_base_url: http://your.base.domain
 ```
-3. Clear your Symfony cache
+3. Run Composer install
+```
+    > cd url-shortener/
+    > composer install
+```
+4. Clear your Symfony cache
 ```
     > php bin/console cache:clear
 ```
