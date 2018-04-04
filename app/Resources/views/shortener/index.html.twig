@@ -1,0 +1,79 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}JP URL Shortener{% endblock %}
+
+{% block stylesheets %}
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+<style type="text/css">
+  body { 
+    background-color: #3b5b8e;
+  }
+  
+  p {
+    margin: 30px 0px;
+  }
+  
+  #main { 
+    background-color: white;
+    margin-top: 15px;
+    padding: 15px;
+  }
+  
+  #result {
+    display: none;
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+    <div class="container rounded text-center" id="main">
+        <h1>John Pierpoint URL Shortener</h1>
+        <hr />
+        <p class="lead">To create a shortened URL, please enter your full source URL (ex. http://google.com) in the box below and click the "Generate" button.</p>
+        <div class="alert alert-success" id="result"></div>
+        <div style="margin: 30px 0px 50px 0px;">
+        <form action="/" id="submission_form" class="form-inline justify-content-center">
+          <div class="form-group">
+            <input type="text" class="form-control" name="source_url" id="source_url" size="40" placeholder="Source URL"> &nbsp;
+            <button type="submit" name="submit" class="btn btn-primary">Generate</button>
+          </div>
+        </form>
+        </div>
+        <small>
+          Note: Shortened URLs will be maintained for 1 year, after which they will be released back into the pool to be re-used.
+        </small>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+<script type="text/javascript">
+  $(document).ready(function() {
+    $('#submission_form').submit(function(event) {
+      event.preventDefault();
+      
+      var sourceUrl = $('#source_url').val();
+
+      if (sourceUrl == 'Source URL') {
+        return false;
+      }
+      
+      var data = '{ "source": "'+sourceUrl+'" }';
+      
+      var result = $.ajax({
+        url: "{{ path('create') }}",
+        type: "POST",
+        data: data,
+        contentType: "application/json"
+      });
+      
+      result.done(function(data) {
+        $("#result").empty().append(data).show();
+      });
+
+    });
+  });
+</script>
+{% endblock %}
+
