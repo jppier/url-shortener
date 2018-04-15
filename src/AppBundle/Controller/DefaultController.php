@@ -3,6 +3,7 @@
 namespace AppBundle\Controller;
 
 use AppBundle\Entity\Url;
+use AppBundle\Entity\UrlHit;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -32,24 +33,37 @@ class DefaultController extends Controller
      * @Route("/{slug}", name="url_redirect")
      * @Method({"GET"})
      *
+     * @param Request $request
      * @param string $slug
+     * @return null
      */
-    public function redirectAction($slug)
+    public function redirectAction(Request $request, $slug)
     {
         $expirationTime = new DateTime();
         $expirationTime = $expirationTime->modify('-1 year');
         $expirationTime = $expirationTime->getTimestamp();
 
+        $doctrine = $this->getDoctrine();
+
         // Find the record based on the url slug
-        $url = $this->getDoctrine()
-            ->getRepository(Url::class)
+        $url = $doctrine->getRepository(Url::class)
             ->findOneBy(['slug' => $slug]);
         
         // If no match is found for the slug, send them to the homepage (or maybe a 404 page...)
         if (empty($url) || $url->getCreated() < $expirationTime) {
             return $this->redirectToRoute('homepage');
         }
-        
+
+        // Create a record to document the hit on this URL
+        $urlHit = new UrlHit();
+        $urlHit->setUrl($url);
+        $urlHit->setIp($request->getClientIp());
+        $urlHit->setAccessed(new DateTime());
+        $urlHit->setReferrer($request->server->get('HTTP_REFERER'));
+
+        $doctrine->getManager()->persist($urlHit);
+        $doctrine->getManager()->flush();
+
         return $this->redirect($url->getOriginalUrl());
     }
     
@@ -62,6 +76,7 @@ class DefaultController extends Controller
      */
     public function createAction(Request $request)
     {
+        /** @var LoggerInterface $logger */
         $logger = $this->get('logger');
         $url = '';
         $doctrine = $this->getDoctrine();
@@ -82,8 +97,63 @@ class DefaultController extends Controller
         $shortUrl = $url->getShortURL();
         return new Response('Your Shortened URL is: <a href="'.$shortUrl.'" target="_blank" class="alert-link">'.$shortUrl.'</a>');
     }
-    
+
     /**
+     * @Route("/stats/{slug}", name="url_stats")
+     * @Method({"GET"})
+     *
+     * @param string $slug
+     * @return null
+     */
+    public function statisticsAction($slug)
+    {
+        $doctrine = $this->getDoctrine();
+
+        // Find the record based on the url slug
+        /** @var Url $url */
+        $url = $doctrine->getRepository(Url::class)
+            ->findOneBy(['slug' => $slug]);
+
+        // If no match is found for the slug, send them to the homepage (or maybe a 404 page...)
+        if (empty($url)) {
+            return $this->redirectToRoute('homepage');
+        }
+
+        $hits = $doctrine->getRepository(UrlHit::class)
+            ->createQueryBuilder('h')
+            ->where('h.url = :url_id')
+            ->setParameter('url_id', $url->getId())
+            ->orderBy('h.accessed', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        $months = [];
+
+        /** @var UrlHit $hit */
+        foreach($hits as $hit) {
+            $month = $hit->getAccessed()->format('M');
+
+            if (!isset($months[$month])) {
+                $months[$month] = 0;
+            }
+
+            $months[$month]++;
+        }
+
+        // Display the statistics page for a given slug
+        return $this->render(
+            'shortener/stats.html.twig',
+            [
+                'url' => $url,
+                'stats' => $hits,
+                'months' => $months,
+                'max_hits' => max($months),
+            ]
+        );
+    }
+
+
+        /**
      * Private helper method to generate a random alphanumeric string for the slug
      *
      * @param int $length
@@ -103,7 +173,7 @@ class DefaultController extends Controller
     
     /**
      * Create a new URL entity or re-purpose an old expired entity
-     * @param string sourceUrl
+     * @param string $sourceUrl
      * @return Url
      */
     private function createUrl($sourceUrl)

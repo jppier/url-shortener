@@ -1,0 +1,108 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}JP URL Shortener - URL Statistics{% endblock %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <style type="text/css">
+        body {
+            background-color: #3b5b8e;
+        }
+
+        p {
+            margin: 30px 0px;
+        }
+
+        #main {
+            background-color: white;
+            margin-top: 15px;
+            padding: 15px;
+        }
+
+        #result {
+            display: none;
+        }
+        #hits {
+            height: 300px;
+            overflow: auto;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="container rounded text-center" id="main">
+        <h1>John Pierpoint URL Shortener</h1>
+        <h2>Statistics for "{{ url.slug }}"</h2>
+        <hr/>
+        <div class="row justify-content-center">
+            <div class="col-2">Short URL:</div>
+            <div class="col-4">{{ url.shortURL }}</div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-2">Original URL:</div>
+            <div class="col-4">{{ url.originalURL }}</div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-2">Created:</div>
+            <div class="col-4">{{ url.created|date("l M jS, Y h:i:sA") }} UTC</div>
+        </div>
+        <hr/>
+        <div id="hits">
+            <table class="table">
+                <thead class="thead-dark">
+                <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">IP</th>
+                    <th scope="col">Referrer</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for hit in stats %}
+                    <tr>
+                        <th scope="row">{{ hit.accessed|date("m/d/Y h:i:sA") }} UTC</th>
+                        <td>{{ hit.ip }}</td>
+                        <td>{{ hit.referrer }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <br />
+        <div id="monthly_stats"></div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+            integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+            crossorigin="anonymous">
+    </script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+        google.charts.load('current', {'packages':['corechart']});
+        google.charts.setOnLoadCallback(drawChart);
+
+        function drawChart() {
+            var data = new google.visualization.DataTable();
+            data.addColumn('string', 'Month');
+            data.addColumn('number', 'Hit Count');
+
+            data.addRows([
+                {% for key, hits in months %}
+                ["{{ key }}", {{ hits }}],
+                {% endfor %}
+            ]);
+
+            var options = {
+                title: 'Hits Per Month',
+                width: 500,
+                height: 300,
+            };
+
+            var chart = new google.visualization.ColumnChart(document.getElementById('monthly_stats'));
+            chart.draw(data, options);
+        }
+    </script>
+{% endblock %}

@@ -35,7 +35,12 @@ class Url
      * @ORM\Column(type="integer")
      */
     private $created;
-    
+
+    public function getId()
+    {
+        return $this->id;
+    }
+
     public function setShortURL($url)
     {
         $this->shortURL = $url;
